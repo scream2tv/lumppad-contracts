@@ -68,6 +68,18 @@ $NIGHT would do nothing for $LUMP holders. The on-chain split is identical —
 and the LUMP bought with it is burned off chain. The half that is not split off
 goes to the treasury in both cohorts.
 
+### Earlier cohorts
+
+Before the launchpad opened, the contracts were compiled and used on mainnet a
+couple of times while the treasury credential and the scale constants were still
+being settled. Those earlier cohorts are not published here. Nothing trades on
+them: their tokens were test launches, and what remains is a single drained pool
+holding its ADA floor and the whole of its own test token. The two cohorts above
+are the ones every token you can buy today was minted under, and each has been
+checked against the chain — the live pools sit at the addresses these bytes
+produce, and the reference script the pools are spent through is byte-identical
+to the `plutus.json` in this repository.
+
 ## Structure
 
 ```
@@ -196,8 +208,10 @@ the cohort's canonical pool hash:
    mint CBOR from `plutus.json`, using the cohort's pool hash above.
 3. Hash the applied script. If it equals the token's policy id, the launch is
    genuine, and the input you just used is its seed UTxO.
-4. If no input reproduces the policy id under any cohort, the token is not a
-   LumpPad launch, whatever its datum claims.
+4. If no input reproduces the policy id under either cohort, the token is not a
+   LumpPad launch you can trade — either a lookalike parked at the shared
+   address, whatever its datum claims, or one of the pre-launch test tokens
+   described under "Earlier cohorts".
 
 Never fall back to matching on the asset name or the pool address.
 
