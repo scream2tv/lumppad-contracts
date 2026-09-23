@@ -47,26 +47,28 @@ scripts, so a different quote asset is a different cohort with different hashes
 and its own pool address. A token keeps deriving under the cohort that minted it
 forever.
 
-| | `cardano-v4` | `cardano-v4-night` |
-|---|---|---|
-| Quote asset | $LUMP | $NIGHT |
-| Quote decimals | 0 | 6 |
-| Launch FDV (`virtual_quote_v4`) | 10,000,000 LUMP | 10,000 NIGHT |
-| Launch price per token | 0.01 LUMP | 0.00001 NIGHT |
-| Flat platform fee per trade | 10,000 LUMP | 10 NIGHT |
-| Half of the platform fee goes to | an always-fail script (destroyed) | a buyback credential (buys and burns LUMP) |
-| `Claim` may be submitted by | anyone | the creator or the treasury only |
-| `Claim` payouts may go to | a key or a script credential | key credentials only |
+| | `cardano-v4` | `cardano-v4-night` | `cardano-v4-dong` |
+|---|---|---|---|
+| Quote asset | $LUMP | $NIGHT | $DONG |
+| Quote decimals | 0 | 6 | 0 |
+| Launch FDV (`virtual_quote_v4`) | 10,000,000 LUMP | 10,000 NIGHT | 2,500,000 DONG |
+| Launch price per token | 0.01 LUMP | 0.00001 NIGHT | 0.0025 DONG |
+| Flat platform fee per trade | 10,000 LUMP | 10 NIGHT | 2,500 DONG |
+| Half of the platform fee goes to | an always-fail script (destroyed) | a buyback credential (buys and burns LUMP) | the same buyback credential |
+| `Claim` may be submitted by | anyone | the creator or the treasury only | the creator or the treasury only |
+| `Claim` payouts may go to | a key or a script credential | key credentials only | key credentials only |
 
-Both cohorts share every other parameter: 1,000,000,000 total supply at 0
+All cohorts share every other parameter: 1,000,000,000 total supply at 0
 decimals, a 3 ADA pool floor, 1.00% creator fee, 0.50% platform fee on top of
-the flat fee, and a 0.30% LP fee retained in the reserves.
+the flat fee, and a 0.30% LP fee retained in the reserves. The DONG cohort is
+the NIGHT cohort's validators compiled against a different quote asset and
+scale — nothing else changed (the `params_v4.ak` constants are the whole diff).
 
-Why the second cohort pays a buyback credential instead of burning: burning
-$NIGHT would do nothing for $LUMP holders. The on-chain split is identical —
-`platform_owed / 2` — but the recipient is a credential the operator controls,
-and the LUMP bought with it is burned off chain. The half that is not split off
-goes to the treasury in both cohorts.
+Why the non-LUMP cohorts pay a buyback credential instead of burning: burning
+$NIGHT or $DONG would do nothing for $LUMP holders. The on-chain split is
+identical — `platform_owed / 2` — but the recipient is a credential the operator
+controls, and the LUMP bought with it is burned off chain. The half that is not
+split off goes to the treasury in every cohort.
 
 ### Earlier cohorts
 
@@ -74,7 +76,7 @@ Before the launchpad opened, the contracts were compiled and used on mainnet a
 couple of times while the treasury credential and the scale constants were still
 being settled. Those earlier cohorts are not published here. Nothing trades on
 them: their tokens were test launches, and what remains is a single drained pool
-holding its ADA floor and the whole of its own test token. The two cohorts above
+holding its ADA floor and the whole of its own test token. The cohorts above
 are the ones every token you can buy today was minted under, and each has been
 checked against the chain — the live pools sit at the addresses these bytes
 produce, and the reference script the pools are spent through is byte-identical
@@ -85,6 +87,7 @@ to the `plutus.json` in this repository.
 ```
 cardano-v4/                 LUMP-quoted cohort
 cardano-v4-night/           NIGHT-quoted cohort
+cardano-v4-dong/            DONG-quoted cohort
   lib/lumpfun/
     params_v4.ak            every compiled-in constant, with identity tests
     math_v4.ak              constant-product quotes over the virtual offset
@@ -124,6 +127,15 @@ Burn address `addr1wy3vnggra5ljl2tunqkhd4hz4agvt422cvrfswcedj8um2c4cgds5`
 
 Pool address `addr1wypw7ee6et02a3u8mcru8zjvkmrd7wf0ya4p68948hk465gz0937a`
 
+`cardano-v4-dong` — DONG-quoted:
+
+| Script | Hash |
+|---|---|
+| `lump_pool_v4` (spend) | `0bdb1adb7aca6db2240d063da15340ef84f26c8dcc7722911be20295` |
+| `lump_mint_v4` (mint, **unapplied**) | `7b79187fb26cbaa2c157791924f1c750dbdf78c59946cff886ab633a` |
+
+Pool address `addr1wy9akxkm0t9xmv3yp5rrmg2ngrhcfunv3hx8wg53r03q99gv4qz6c`
+
 Every address above was derived from the hash beside it, not copied. The pool
 validator is unparameterised, so **every pool of a cohort shares one address** —
 which is exactly why an address scan does not identify a token (see below).
@@ -133,8 +145,8 @@ credential satisfies the validator:
 
 | Credential | Hash |
 |---|---|
-| Treasury (both cohorts) | `c79844a83ab36100765fbc19fb8d738a0d46657708f6ad08c8c637f3` |
-| LUMP buyback (NIGHT cohort) | `051ef6ae7c8c2d1d1dd78601cdcc097c28bf617ba621ea47c1d111bb` |
+| Treasury (every cohort) | `c79844a83ab36100765fbc19fb8d738a0d46657708f6ad08c8c637f3` |
+| LUMP buyback (NIGHT and DONG cohorts) | `051ef6ae7c8c2d1d1dd78601cdcc097c28bf617ba621ea47c1d111bb` |
 
 ## Building and verifying
 
@@ -142,8 +154,8 @@ Built with [Aiken](https://aiken-lang.org) `v1.1.17+c3a7fba`, Plutus `v3`,
 `aiken-lang/stdlib v3.1.0` (pinned in `aiken.lock`).
 
 ```sh
-cd cardano-v4          # or cardano-v4-night
-aiken check            # 138 tests here, 149 in the NIGHT cohort
+cd cardano-v4          # or cardano-v4-night, cardano-v4-dong
+aiken check            # 138 tests here, 149 in each of the NIGHT and DONG cohorts
 aiken build            # regenerates plutus.json
 ```
 
@@ -168,24 +180,26 @@ ledger uses, and it must equal the entry in `hashes.expected`.
 From `lib/lumpfun/params_v4.ak`. Quote amounts are in the quote asset's **base
 units**, so a NIGHT figure is 10⁶ times its display value.
 
-| Constant | `cardano-v4` | `cardano-v4-night` |
-|---|---|---|
-| `total_supply_v4` | 1,000,000,000 | 1,000,000,000 |
-| `virtual_quote_v4` | 10,000,000 | 10,000,000,000 |
-| `pool_floor_v4` | 3,000,000 lovelace | 3,000,000 lovelace |
-| `creator_fee_bps_v4` | 100 | 100 |
-| `platform_fee_bps_v4` | 50 | 50 |
-| `platform_fee_flat_v4` | 10,000 | 10,000,000 |
-| `lp_fee_bps_v4` | 30 | 30 |
+| Constant | `cardano-v4` | `cardano-v4-night` | `cardano-v4-dong` |
+|---|---|---|---|
+| `total_supply_v4` | 1,000,000,000 | 1,000,000,000 | 1,000,000,000 |
+| `virtual_quote_v4` | 10,000,000 | 10,000,000,000 | 2,500,000 |
+| `pool_floor_v4` | 3,000,000 lovelace | 3,000,000 lovelace | 3,000,000 lovelace |
+| `creator_fee_bps_v4` | 100 | 100 | 100 |
+| `platform_fee_bps_v4` | 50 | 50 | 50 |
+| `platform_fee_flat_v4` | 10,000 | 10,000,000 | 2,500 |
+| `lp_fee_bps_v4` | 30 | 30 | 30 |
 
-Worked genesis vectors, identical in token terms across both cohorts because
-every quote figure in the NIGHT cohort is exactly 1,000× the LUMP cohort's:
+Worked genesis vectors. The token side is identical wherever the buy is the same
+fraction of `virtual_quote_v4` (the flat fee is always 1/1000 of it), except
+where floor division at a smaller scale drops a few tokens:
 
 | Buy at genesis | Tokens out |
 |---|---|
 | 10,000 LUMP / 10 NIGHT | 996,006 |
-| 100,000 LUMP / 100 NIGHT | 9,871,580 |
-| 1,000,000 LUMP / 1,000 NIGHT | 90,661,089 |
+| 2,500 DONG | 995,807 |
+| 100,000 LUMP / 100 NIGHT / 25,000 DONG | 9,871,580 |
+| 1,000,000 LUMP / 1,000 NIGHT / 250,000 DONG | 90,661,089 |
 
 The quote is priced net of the LP fee, the full input enters the reserve, and
 amounts out are floored, so `k` strictly grows on every trade.
@@ -208,7 +222,7 @@ the cohort's canonical pool hash:
    mint CBOR from `plutus.json`, using the cohort's pool hash above.
 3. Hash the applied script. If it equals the token's policy id, the launch is
    genuine, and the input you just used is its seed UTxO.
-4. If no input reproduces the policy id under either cohort, the token is not a
+4. If no input reproduces the policy id under any cohort, the token is not a
    LumpPad launch you can trade — either a lookalike parked at the shared
    address, whatever its datum claims, or one of the pre-launch test tokens
    described under "Earlier cohorts".
@@ -217,8 +231,8 @@ Never fall back to matching on the asset name or the pool address.
 
 ## Testing
 
-`aiken check` runs 138 tests in `cardano-v4` and 149 in `cardano-v4-night`, all
-unit tests over mock transactions. Every number in a test is re-derived from
+`aiken check` runs 138 tests in `cardano-v4` and 149 in each of
+`cardano-v4-night` and `cardano-v4-dong`, all unit tests over mock transactions. Every number in a test is re-derived from
 `params_v4.ak` rather than copied from another cohort, because a constant that
 happens to compile makes a rejection test pass for the wrong reason.
 
@@ -256,9 +270,9 @@ listed because a contract you cannot audit honestly is not worth publishing.
   directed to a *script* address carrying the same hash as a key recipient,
   which nobody can spend from. A griefer pays the min-UTxO themselves and gains
   nothing; the loss is the fees accrued since the last claim. It is mitigated by
-  claiming often. **The NIGHT cohort closes this**: a claim must be signed by
-  the creator or the treasury, and every payout must land at a verification-key
-  credential.
+  claiming often. **The NIGHT and DONG cohorts close this**: a claim must be
+  signed by the creator or the treasury, and every payout must land at a
+  verification-key credential.
 - **A position worth less than the flat fee cannot be sold.** `Sell` requires
   the seller to be paid something after fees. This is the flat fee's nature; the
   interface says so before a trade is attempted.
